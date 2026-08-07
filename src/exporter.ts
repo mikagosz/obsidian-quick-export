@@ -1,4 +1,4 @@
-import { Editor, Notice, TFile } from 'obsidian';
+import { App, Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import { promises as fs } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -6,12 +6,17 @@ import { join } from 'path';
 export type ExportFormat = 'md' | 'txt';
 export type TimestampFormat = 'iso' | 'readable';
 
-export interface ExportOptions {
+/** Everything needed to put text on disk. */
+export interface WriteOptions {
 	format: ExportFormat;
-	selectionOnly: boolean;
 	copyToClipboard: boolean;
 	targetDir: string;
 	timestampFormat: TimestampFormat;
+}
+
+/** Adds the editor-specific choice of whole note vs. selection. */
+export interface ExportOptions extends WriteOptions {
+	selectionOnly: boolean;
 }
 
 /**
@@ -55,32 +60,22 @@ function timestamp(format: TimestampFormat): string {
 
 export function buildFileName(
 	file: TFile | null,
-	options: Pick<ExportOptions, 'format' | 'timestampFormat'>,
+	options: Pick<WriteOptions, 'format' | 'timestampFormat'>,
 ): string {
 	const base = sanitizeName(file?.basename ?? 'untitled');
 	return `${base}-${timestamp(options.timestampFormat)}.${options.format}`;
 }
 
 /**
- * Writes the active note (or its selection) to disk and optionally mirrors it
- * to the clipboard. Returns the written path, or null if nothing was written.
+ * Shared tail of every export: name the file, write it, optionally mirror it
+ * to the clipboard. Callers are responsible for rejecting empty input, since
+ * only they know whether "empty" means an empty note or an empty selection.
  */
-export async function exportText(
-	editor: Editor,
+async function writeExport(
+	text: string,
 	file: TFile | null,
-	options: ExportOptions,
+	options: WriteOptions,
 ): Promise<string | null> {
-	const text = options.selectionOnly
-		? editor.getSelection()
-		: editor.getValue();
-
-	if (text.trim().length === 0) {
-		new Notice(
-			options.selectionOnly ? 'Nothing selected' : 'Note is empty',
-		);
-		return null;
-	}
-
 	const fileName = buildFileName(file, options);
 	const fullPath = join(options.targetDir, fileName);
 
@@ -105,4 +100,70 @@ export async function exportText(
 
 	new Notice(`Saved ${fileName}`);
 	return fullPath;
+}
+
+/**
+ * Export driven by an open editor: the whole note, or just the selection.
+ */
+export async function exportText(
+	editor: Editor,
+	file: TFile | null,
+	options: ExportOptions,
+): Promise<string | null> {
+	const text = options.selectionOnly
+		? editor.getSelection()
+		: editor.getValue();
+
+	if (text.trim().length === 0) {
+		new Notice(
+			options.selectionOnly ? 'Nothing selected' : 'Note is empty',
+		);
+		return null;
+	}
+
+	return writeExport(text, file, options);
+}
+
+/**
+ * If the file is open in a markdown editor, returns the live editor content.
+ * Reading the vault instead would miss edits Obsidian has not flushed to disk
+ * yet, so a right-click export could silently save a stale copy.
+ */
+function readOpenEditor(app: App, file: TFile): string | null {
+	for (const leaf of app.workspace.getLeavesOfType('markdown')) {
+		const view = leaf.view;
+		if (view instanceof MarkdownView && view.file === file) {
+			return view.editor.getValue();
+		}
+	}
+	return null;
+}
+
+/**
+ * Export driven by a file, with no editor involved — the file-explorer and
+ * tab context menus reach notes that may not be open at all.
+ */
+export async function exportFile(
+	app: App,
+	file: TFile,
+	options: WriteOptions,
+): Promise<string | null> {
+	let text = readOpenEditor(app, file);
+
+	if (text === null) {
+		try {
+			text = await app.vault.read(file);
+		} catch (err) {
+			console.error('[quick-export] read failed', err);
+			new Notice(`Export failed: ${describeError(err)}`);
+			return null;
+		}
+	}
+
+	if (text.trim().length === 0) {
+		new Notice('Note is empty');
+		return null;
+	}
+
+	return writeExport(text, file, options);
 }

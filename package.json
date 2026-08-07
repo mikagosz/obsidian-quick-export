@@ -1,7 +1,7 @@
 {
 	"name": "obsidian-quick-export",
-	"version": "0.1.0",
-	"description": "Export the current Obsidian note or selection to a folder as .md or .txt.",
+	"version": "0.2.0",
+	"description": "Right-click an Obsidian note or selection to save a copy outside the vault as .md or .txt.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

@@ -1,5 +1,19 @@
-import { Editor, MarkdownFileInfo, MarkdownView, Plugin } from 'obsidian';
-import { exportText, resolveDir, type ExportFormat } from './exporter';
+import {
+	Editor,
+	MarkdownFileInfo,
+	MarkdownView,
+	Menu,
+	Plugin,
+	TAbstractFile,
+	TFile,
+} from 'obsidian';
+import {
+	exportFile,
+	exportText,
+	resolveDir,
+	type ExportFormat,
+	type WriteOptions,
+} from './exporter';
 import {
 	DEFAULT_SETTINGS,
 	QuickExportSettingTab,
@@ -57,17 +71,107 @@ export default class QuickExportPlugin extends Plugin {
 					ctx: MarkdownView | MarkdownFileInfo,
 				) => {
 					void exportText(editor, ctx.file, {
-						format: variant.format,
+						...this.writeOptions(variant.format),
 						selectionOnly: variant.selectionOnly,
-						copyToClipboard: this.settings.autoClipboard,
-						targetDir: resolveDir(this.settings.exportPath),
-						timestampFormat: this.settings.timestampFormat,
 					});
 				},
 			});
 		}
 
+		this.registerFileMenu();
+		this.registerEditorMenu();
+
 		this.addSettingTab(new QuickExportSettingTab(this.app, this));
+	}
+
+	/** Right-click a note in the file explorer, its tab, or the title bar. */
+	private registerFileMenu() {
+		this.registerEvent(
+			this.app.workspace.on(
+				'file-menu',
+				(menu: Menu, file: TAbstractFile) => {
+					if (!(file instanceof TFile)) return;
+					if (file.extension !== 'md') return;
+
+					menu.addItem((item) =>
+						item
+							.setTitle('Export a copy as Markdown')
+							.setIcon('download')
+							.onClick(() => {
+								void exportFile(
+									this.app,
+									file,
+									this.writeOptions('md'),
+								);
+							}),
+					);
+					menu.addItem((item) =>
+						item
+							.setTitle('Export a copy as plain text')
+							.setIcon('download')
+							.onClick(() => {
+								void exportFile(
+									this.app,
+									file,
+									this.writeOptions('txt'),
+								);
+							}),
+					);
+				},
+			),
+		);
+	}
+
+	/**
+	 * Right-click inside the editor. The items only appear when text is
+	 * actually selected, so the menu stays clean during ordinary editing.
+	 */
+	private registerEditorMenu() {
+		this.registerEvent(
+			this.app.workspace.on(
+				'editor-menu',
+				(
+					menu: Menu,
+					editor: Editor,
+					ctx: MarkdownView | MarkdownFileInfo,
+				) => {
+					if (editor.getSelection().trim().length === 0) return;
+
+					menu.addItem((item) =>
+						item
+							.setTitle('Export selection as Markdown')
+							.setIcon('download')
+							.onClick(() => {
+								void exportText(editor, ctx.file, {
+									...this.writeOptions('md'),
+									selectionOnly: true,
+								});
+							}),
+					);
+					menu.addItem((item) =>
+						item
+							.setTitle('Export selection as plain text')
+							.setIcon('download')
+							.onClick(() => {
+								void exportText(editor, ctx.file, {
+									...this.writeOptions('txt'),
+									selectionOnly: true,
+								});
+							}),
+					);
+				},
+			),
+		);
+	}
+
+	/** Settings are read at click time, so changes take effect immediately. */
+	private writeOptions(format: ExportFormat): WriteOptions {
+		return {
+			format,
+			copyToClipboard: this.settings.autoClipboard,
+			targetDir: resolveDir(this.settings.exportPath),
+			timestampFormat: this.settings.timestampFormat,
+		};
 	}
 
 	async loadSettings() {

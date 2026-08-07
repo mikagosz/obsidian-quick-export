@@ -1,12 +1,32 @@
 # Quick Export
 
-An Obsidian plugin that writes the current note — or just the selected text — to a folder outside the vault, as `.md` or `.txt`, with one hotkey.
+An Obsidian plugin that saves a copy of a note — or just the text you selected — to a folder outside the vault, as `.md` or `.txt`.
 
 Desktop only: it uses Node's filesystem APIs, which are not available on iOS or Android.
 
-## Commands
+## Right-click a note
 
-Four commands are registered, all of which appear only while an editor is active:
+In the file explorer, on a tab, or on the note title:
+
+- **Export a copy as Markdown**
+- **Export a copy as plain text**
+
+The note does not have to be open. If it *is* open with unsaved edits, the export takes the live editor content rather than the older copy on disk.
+
+Only markdown notes get these items; right-clicking an image or a PDF leaves the menu untouched.
+
+## Right-click a selection
+
+Select text inside a note, then right-click it:
+
+- **Export selection as Markdown**
+- **Export selection as plain text**
+
+These items appear **only when something is selected**, so the editor's context menu stays clean during ordinary writing.
+
+## Command palette and hotkeys
+
+The same four operations are also registered as commands, visible only while an editor is active:
 
 | Command | Writes |
 |---|---|
@@ -15,7 +35,7 @@ Four commands are registered, all of which appear only while an editor is active
 | Export note as plain text | whole note → `.txt` |
 | Export selection as plain text | selection → `.txt` |
 
-Assign a hotkey under **Settings → Hotkeys**, filtering by "Quick Export". Four hotkeys for four variants is usually overkill — bind the one you actually use and reach the rest from the command palette.
+Assign a hotkey under **Settings → Hotkeys**, filtering by "Quick Export". Four hotkeys for four variants is usually overkill — bind the one you actually use and reach the rest from the menus.
 
 ## File naming
 
@@ -80,10 +100,24 @@ Then **Settings → Community plugins → Reload plugins**, and enable Quick Exp
 ## Layout
 
 ```
-src/main.ts        plugin entry, command registration
+src/main.ts        plugin entry, commands, file-menu and editor-menu wiring
 src/exporter.ts    text extraction, file naming, disk write, clipboard
 src/settings.ts    settings interface, defaults, settings tab
 ```
+
+`exporter.ts` exposes two entry points over a shared write path: `exportText`
+for anything driven by an open editor, and `exportFile` for the context-menu
+case where a note may not be open at all.
+
+## What it touches
+
+The plugin reads; it never modifies the vault. There are no calls to
+`vault.modify`, `vault.delete`, `vault.trash`, `vault.rename` or
+`vault.create`, and no `replaceSelection` / `replaceRange` on the editor.
+
+The only filesystem operation is a single `fs.writeFile` into the configured
+export folder. The plugin does not create that folder — a path that does not
+exist produces an error notice rather than a surprise directory.
 
 ## License
 
