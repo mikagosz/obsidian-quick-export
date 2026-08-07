@@ -1,9 +1,9 @@
 {
 	"id": "quick-export",
 	"name": "Quick Export",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"minAppVersion": "1.4.0",
-	"description": "Export the current note or selection to a folder as .md or .txt.",
+	"description": "Right-click a note or a text selection to save a copy outside the vault as .md or .txt.",
 	"author": "mikagosz",
 	"authorUrl": "https://github.com/mikagosz",
 	"isDesktopOnly": true
