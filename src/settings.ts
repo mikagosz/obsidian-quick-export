@@ -1,4 +1,13 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import {
+	App,
+	PluginSettingTab,
+	Setting,
+	type SettingDefinitionBase,
+	type SettingDefinitionItem,
+	type SettingDropdownControl,
+	type SettingTextControl,
+	type SettingToggleControl,
+} from 'obsidian';
 import type QuickExportPlugin from './main';
 import type { TimestampFormat } from './exporter';
 
@@ -16,6 +25,18 @@ export const DEFAULT_SETTINGS: QuickExportSettings = {
 	askLocation: true,
 };
 
+type SettingKey = keyof QuickExportSettings;
+
+/** Only the three control kinds this plugin actually uses. */
+type QuickExportControl =
+	| SettingToggleControl<SettingKey>
+	| SettingTextControl<SettingKey>
+	| SettingDropdownControl<SettingKey>;
+
+interface QuickExportDefinition extends SettingDefinitionBase {
+	control: QuickExportControl;
+}
+
 export class QuickExportSettingTab extends PluginSettingTab {
 	plugin: QuickExportPlugin;
 
@@ -24,64 +45,128 @@ export class QuickExportSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	/**
+	 * The single source of truth for this tab. Obsidian 1.13.0+ renders these
+	 * definitions itself and indexes them for the settings search; older
+	 * versions never call `getSettingDefinitions`, so `display` below walks the
+	 * same list. Keeping one list means the two paths cannot drift apart.
+	 */
+	private definitions(): QuickExportDefinition[] {
+		return [
+			{
+				name: 'Ask where to save',
+				desc: 'Show a native save dialog on every export instead of writing straight to the export folder below.',
+				aliases: ['save dialog', 'prompt', 'destination'],
+				control: {
+					type: 'toggle',
+					key: 'askLocation',
+					defaultValue: DEFAULT_SETTINGS.askLocation,
+				},
+			},
+			{
+				name: 'Export folder',
+				desc: 'Where exported files are written. A leading "~" means your home folder. The save dialog opens here too.',
+				aliases: ['output', 'path', 'folder'],
+				control: {
+					type: 'text',
+					key: 'exportPath',
+					placeholder: DEFAULT_SETTINGS.exportPath,
+					defaultValue: DEFAULT_SETTINGS.exportPath,
+				},
+			},
+			{
+				name: 'Timestamp format',
+				desc: 'Appended to the note name to keep exports unique.',
+				aliases: ['date', 'suffix', 'file name'],
+				control: {
+					type: 'dropdown',
+					key: 'timestampFormat',
+					options: {
+						readable: 'Compact (2026-08-07_143045)',
+						iso: 'Expanded (2026-08-07T14-30-45)',
+					},
+					defaultValue: DEFAULT_SETTINGS.timestampFormat,
+				},
+			},
+			{
+				name: 'Also copy to clipboard',
+				desc: 'Copy the exported text as well as writing it to disk.',
+				aliases: ['clipboard', 'copy'],
+				control: {
+					type: 'toggle',
+					key: 'autoClipboard',
+					defaultValue: DEFAULT_SETTINGS.autoClipboard,
+				},
+			},
+		];
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return this.definitions();
+	}
+
+	getControlValue(key: string): unknown {
+		return this.plugin.settings[key as SettingKey];
+	}
+
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		Object.assign(this.plugin.settings, { [key]: value });
+		await this.plugin.saveSettings();
+	}
+
+	/**
+	 * Fallback for Obsidian older than 1.13.0, which renders setting tabs
+	 * imperatively. Deliberately reads from the same `definitions()` list.
+	 */
 	display(): void {
 		const { containerEl } = this;
 
 		containerEl.empty();
 
-		new Setting(containerEl)
-			.setName('Ask where to save')
-			.setDesc(
-				'Show a native save dialog on every export instead of writing straight to the export folder below.',
-			)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.askLocation)
-					.onChange(async (value) => {
-						this.plugin.settings.askLocation = value;
-						await this.plugin.saveSettings();
-					}),
-			);
+		for (const definition of this.definitions()) {
+			const setting = new Setting(containerEl).setName(definition.name);
+			if (typeof definition.desc === 'string') {
+				setting.setDesc(definition.desc);
+			}
 
-		new Setting(containerEl)
-			.setName('Export folder')
-			.setDesc(
-				'Where exported files are written. A leading "~" is your home folder. Also the folder the save dialog opens to, when "Ask where to save" is on.',
-			)
-			.addText((text) =>
-				text
-					.setValue(this.plugin.settings.exportPath)
-					.onChange(async (value) => {
-						this.plugin.settings.exportPath = value;
-						await this.plugin.saveSettings();
-					}),
-			);
+			const control = definition.control;
+			const commit = (value: unknown) => {
+				void this.setControlValue(control.key, value);
+			};
 
-		new Setting(containerEl)
-			.setName('Timestamp format')
-			.setDesc('Appended to the note name to keep exports unique.')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('readable', 'Compact (2026-08-07_143045)')
-					.addOption('iso', 'Expanded (2026-08-07T14-30-45)')
-					.setValue(this.plugin.settings.timestampFormat)
-					.onChange(async (value) => {
-						this.plugin.settings.timestampFormat =
-							value as TimestampFormat;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName('Also copy to clipboard')
-			.setDesc('Copy the exported text as well as writing it to disk.')
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.autoClipboard)
-					.onChange(async (value) => {
-						this.plugin.settings.autoClipboard = value;
-						await this.plugin.saveSettings();
-					}),
-			);
+			switch (control.type) {
+				case 'toggle':
+					setting.addToggle((toggle) =>
+						toggle
+							.setValue(
+								this.getControlValue(control.key) as boolean,
+							)
+							.onChange(commit),
+					);
+					break;
+				case 'text':
+					setting.addText((text) =>
+						text
+							.setPlaceholder(control.placeholder ?? '')
+							.setValue(this.getControlValue(control.key) as string)
+							.onChange(commit),
+					);
+					break;
+				case 'dropdown':
+					setting.addDropdown((dropdown) => {
+						for (const [value, label] of Object.entries(
+							control.options,
+						)) {
+							dropdown.addOption(value, label);
+						}
+						dropdown
+							.setValue(
+								this.getControlValue(control.key) as string,
+							)
+							.onChange(commit);
+					});
+					break;
+			}
+		}
 	}
 }
