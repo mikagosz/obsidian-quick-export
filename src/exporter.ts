@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownView, Notice, TFile } from 'obsidian';
+import { remote } from 'electron';
 import { promises as fs } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
@@ -12,6 +13,7 @@ export interface WriteOptions {
 	copyToClipboard: boolean;
 	targetDir: string;
 	timestampFormat: TimestampFormat;
+	askLocation: boolean;
 }
 
 /** Adds the editor-specific choice of whole note vs. selection. */
@@ -67,6 +69,33 @@ export function buildFileName(
 }
 
 /**
+ * With `askLocation` on, opens a native save dialog seeded with the
+ * configured export folder and suggested name — the user can redirect the
+ * save anywhere. A cancelled dialog returns null; it never falls back to
+ * writing silently, since that would defeat the point of asking.
+ */
+async function resolveTargetPath(
+	fileName: string,
+	options: WriteOptions,
+): Promise<string | null> {
+	if (!options.askLocation) {
+		return join(options.targetDir, fileName);
+	}
+
+	const result = await remote.dialog.showSaveDialog({
+		defaultPath: join(options.targetDir, fileName),
+		filters: [
+			{
+				name: options.format === 'md' ? 'Markdown' : 'Text',
+				extensions: [options.format],
+			},
+		],
+	});
+
+	return result.canceled || !result.filePath ? null : result.filePath;
+}
+
+/**
  * Shared tail of every export: name the file, write it, optionally mirror it
  * to the clipboard. Callers are responsible for rejecting empty input, since
  * only they know whether "empty" means an empty note or an empty selection.
@@ -77,7 +106,12 @@ async function writeExport(
 	options: WriteOptions,
 ): Promise<string | null> {
 	const fileName = buildFileName(file, options);
-	const fullPath = join(options.targetDir, fileName);
+	const fullPath = await resolveTargetPath(fileName, options);
+
+	if (fullPath === null) {
+		new Notice('Export cancelled');
+		return null;
+	}
 
 	try {
 		await fs.writeFile(fullPath, text, 'utf-8');

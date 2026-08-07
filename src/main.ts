@@ -171,6 +171,7 @@ export default class QuickExportPlugin extends Plugin {
 			copyToClipboard: this.settings.autoClipboard,
 			targetDir: resolveDir(this.settings.exportPath),
 			timestampFormat: this.settings.timestampFormat,
+			askLocation: this.settings.askLocation,
 		};
 	}
 
