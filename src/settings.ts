@@ -6,12 +6,14 @@ export interface QuickExportSettings {
 	autoClipboard: boolean;
 	exportPath: string;
 	timestampFormat: TimestampFormat;
+	askLocation: boolean;
 }
 
 export const DEFAULT_SETTINGS: QuickExportSettings = {
 	autoClipboard: false,
 	exportPath: '~/Desktop',
 	timestampFormat: 'readable',
+	askLocation: true,
 };
 
 export class QuickExportSettingTab extends PluginSettingTab {
@@ -28,9 +30,23 @@ export class QuickExportSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
+			.setName('Ask where to save')
+			.setDesc(
+				'Show a native save dialog on every export instead of writing straight to the export folder below.',
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.askLocation)
+					.onChange(async (value) => {
+						this.plugin.settings.askLocation = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName('Export folder')
 			.setDesc(
-				'Where exported files are written. A leading "~" is your home folder.',
+				'Where exported files are written. A leading "~" is your home folder. Also the folder the save dialog opens to, when "Ask where to save" is on.',
 			)
 			.addText((text) =>
 				text
