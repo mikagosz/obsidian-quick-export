@@ -82,7 +82,7 @@ npm run lint
 Symlink the repo into a development vault rather than copying it:
 
 ```bash
-ln -s ~/Desktop/Plugins/quick-export ~/obsidian-dev-vault/.obsidian/plugins/quick-export
+ln -s /path/to/this/repo ~/obsidian-dev-vault/.obsidian/plugins/quick-export
 ```
 
 Do not develop against a vault you care about — a half-finished export plugin has write access to real files.
