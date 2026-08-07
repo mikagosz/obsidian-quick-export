@@ -89,10 +89,10 @@ Do not develop against a vault you care about — a half-finished export plugin 
 
 ## Installing into a real vault
 
-Copy the three build artifacts (not the whole repo) into `<vault>/.obsidian/plugins/quick-export/`:
+Copy the two build artifacts (not the whole repo) into `<vault>/.obsidian/plugins/quick-export/`:
 
 ```bash
-cp main.js manifest.json styles.css <vault>/.obsidian/plugins/quick-export/
+cp main.js manifest.json <vault>/.obsidian/plugins/quick-export/
 ```
 
 Then **Settings → Community plugins → Reload plugins**, and enable Quick Export.
