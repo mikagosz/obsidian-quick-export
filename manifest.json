@@ -1,0 +1,10 @@
+{
+	"id": "quick-export",
+	"name": "Quick Export",
+	"version": "0.1.0",
+	"minAppVersion": "1.4.0",
+	"description": "Export the current note or selection to a folder as .md or .txt.",
+	"author": "mikagosz",
+	"authorUrl": "https://github.com/mikagosz",
+	"isDesktopOnly": true
+}
