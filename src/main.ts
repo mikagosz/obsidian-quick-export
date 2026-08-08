@@ -1,24 +1,20 @@
 import {
-	Editor,
-	MarkdownFileInfo,
-	MarkdownView,
-	Menu,
+	type Editor,
+	type MarkdownFileInfo,
+	type MarkdownView,
+	type Menu,
 	Plugin,
-	TAbstractFile,
+	type TAbstractFile,
 	TFile,
 } from 'obsidian';
 import {
+	type ExportFormat,
 	exportFile,
 	exportText,
 	resolveDir,
-	type ExportFormat,
 	type WriteOptions,
 } from './exporter';
-import {
-	DEFAULT_SETTINGS,
-	QuickExportSettingTab,
-	type QuickExportSettings,
-} from './settings';
+import { DEFAULT_SETTINGS, type QuickExportSettings, QuickExportSettingTab } from './settings';
 
 interface Variant {
 	id: string;
@@ -66,10 +62,7 @@ export default class QuickExportPlugin extends Plugin {
 				name: variant.name,
 				// editorCallback keeps the command out of the palette whenever
 				// there is no active editor, so no manual view check is needed.
-				editorCallback: (
-					editor: Editor,
-					ctx: MarkdownView | MarkdownFileInfo,
-				) => {
+				editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
 					void exportText(editor, ctx.file, {
 						...this.writeOptions(variant.format),
 						selectionOnly: variant.selectionOnly,
@@ -87,38 +80,27 @@ export default class QuickExportPlugin extends Plugin {
 	/** Right-click a note in the file explorer, its tab, or the title bar. */
 	private registerFileMenu() {
 		this.registerEvent(
-			this.app.workspace.on(
-				'file-menu',
-				(menu: Menu, file: TAbstractFile) => {
-					if (!(file instanceof TFile)) return;
-					if (file.extension !== 'md') return;
+			this.app.workspace.on('file-menu', (menu: Menu, file: TAbstractFile) => {
+				if (!(file instanceof TFile)) return;
+				if (file.extension !== 'md') return;
 
-					menu.addItem((item) =>
-						item
-							.setTitle('Export a copy as Markdown')
-							.setIcon('download')
-							.onClick(() => {
-								void exportFile(
-									this.app,
-									file,
-									this.writeOptions('md'),
-								);
-							}),
-					);
-					menu.addItem((item) =>
-						item
-							.setTitle('Export a copy as plain text')
-							.setIcon('download')
-							.onClick(() => {
-								void exportFile(
-									this.app,
-									file,
-									this.writeOptions('txt'),
-								);
-							}),
-					);
-				},
-			),
+				menu.addItem((item) =>
+					item
+						.setTitle('Export a copy as Markdown')
+						.setIcon('download')
+						.onClick(() => {
+							void exportFile(this.app, file, this.writeOptions('md'));
+						}),
+				);
+				menu.addItem((item) =>
+					item
+						.setTitle('Export a copy as plain text')
+						.setIcon('download')
+						.onClick(() => {
+							void exportFile(this.app, file, this.writeOptions('txt'));
+						}),
+				);
+			}),
 		);
 	}
 
@@ -130,11 +112,7 @@ export default class QuickExportPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on(
 				'editor-menu',
-				(
-					menu: Menu,
-					editor: Editor,
-					ctx: MarkdownView | MarkdownFileInfo,
-				) => {
+				(menu: Menu, editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
 					if (editor.getSelection().trim().length === 0) return;
 
 					menu.addItem((item) =>
