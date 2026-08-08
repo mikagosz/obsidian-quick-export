@@ -1,5 +1,5 @@
 import {
-	App,
+	type App,
 	PluginSettingTab,
 	Setting,
 	type SettingDefinitionBase,
@@ -8,8 +8,8 @@ import {
 	type SettingTextControl,
 	type SettingToggleControl,
 } from 'obsidian';
-import type QuickExportPlugin from './main';
 import type { TimestampFormat } from './exporter';
+import type QuickExportPlugin from './main';
 
 export interface QuickExportSettings {
 	autoClipboard: boolean;
@@ -137,11 +137,7 @@ export class QuickExportSettingTab extends PluginSettingTab {
 			switch (control.type) {
 				case 'toggle':
 					setting.addToggle((toggle) =>
-						toggle
-							.setValue(
-								this.getControlValue(control.key) as boolean,
-							)
-							.onChange(commit),
+						toggle.setValue(this.getControlValue(control.key) as boolean).onChange(commit),
 					);
 					break;
 				case 'text':
@@ -154,16 +150,10 @@ export class QuickExportSettingTab extends PluginSettingTab {
 					break;
 				case 'dropdown':
 					setting.addDropdown((dropdown) => {
-						for (const [value, label] of Object.entries(
-							control.options,
-						)) {
+						for (const [value, label] of Object.entries(control.options)) {
 							dropdown.addOption(value, label);
 						}
-						dropdown
-							.setValue(
-								this.getControlValue(control.key) as string,
-							)
-							.onChange(commit);
+						dropdown.setValue(this.getControlValue(control.key) as string).onChange(commit);
 					});
 					break;
 			}

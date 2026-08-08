@@ -1,12 +1,14 @@
+import { defineConfig, globalIgnores } from 'eslint/config';
 import obsidianmd from 'eslint-plugin-obsidianmd';
 import globals from 'globals';
-import { globalIgnores, defineConfig } from 'eslint/config';
 
 export default defineConfig(
 	globalIgnores([
 		'node_modules',
 		'dist',
 		'esbuild.config.mjs',
+		'vitest.config.ts',
+		'biome.json',
 		'version-bump.mjs',
 		'versions.json',
 		'main.js',

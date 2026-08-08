@@ -1,6 +1,6 @@
-import { App, Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import { remote } from 'electron';
 import { promises as fs } from 'fs';
+import { type App, type Editor, MarkdownView, Notice, type TFile } from 'obsidian';
 import { homedir } from 'os';
 import { join } from 'path';
 
@@ -74,10 +74,7 @@ export function buildFileName(
  * save anywhere. A cancelled dialog returns null; it never falls back to
  * writing silently, since that would defeat the point of asking.
  */
-async function resolveTargetPath(
-	fileName: string,
-	options: WriteOptions,
-): Promise<string | null> {
+async function resolveTargetPath(fileName: string, options: WriteOptions): Promise<string | null> {
 	if (!options.askLocation) {
 		return join(options.targetDir, fileName);
 	}
@@ -144,14 +141,10 @@ export async function exportText(
 	file: TFile | null,
 	options: ExportOptions,
 ): Promise<string | null> {
-	const text = options.selectionOnly
-		? editor.getSelection()
-		: editor.getValue();
+	const text = options.selectionOnly ? editor.getSelection() : editor.getValue();
 
 	if (text.trim().length === 0) {
-		new Notice(
-			options.selectionOnly ? 'Nothing selected' : 'Note is empty',
-		);
+		new Notice(options.selectionOnly ? 'Nothing selected' : 'Note is empty');
 		return null;
 	}
 
