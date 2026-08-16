@@ -89,6 +89,12 @@ Do not develop against a vault you care about — a half-finished export plugin 
 
 ## Installing into a real vault
 
+**Settings → Community plugins → Browse**, search for *Quick Export*, install and
+enable it. Updates then arrive on their own.
+
+<details>
+<summary>Installing by hand, for a pre-release build</summary>
+
 Copy the two build artifacts (not the whole repo) into `<vault>/.obsidian/plugins/quick-export/`:
 
 ```bash
@@ -96,6 +102,9 @@ cp main.js manifest.json <vault>/.obsidian/plugins/quick-export/
 ```
 
 Then **Settings → Community plugins → Reload plugins**, and enable Quick Export.
+
+A copy installed this way does not update itself.
+</details>
 
 ## Layout
 

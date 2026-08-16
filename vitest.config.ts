@@ -6,11 +6,13 @@ export default defineConfig({
 		include: ['tests/**/*.test.ts'],
 		environment: 'node',
 
-		// A plugin imports "obsidian", which does not exist under test. Keep the
-		// logic in files that do NOT import it and nothing needs stubbing; when
-		// that is impossible, uncomment the alias and add a double in
-		// tests/mocks/obsidian.ts.
-		// alias: { obsidian: "./tests/mocks/obsidian.ts" },
+		// A plugin imports "obsidian", which does not exist under test, and this one
+		// also imports "electron". Both are stubbed rather than avoided, because the
+		// naming and path logic worth testing lives in the same file as the writes.
+		alias: {
+			obsidian: './tests/mocks/obsidian.ts',
+			electron: './tests/mocks/electron.ts',
+		},
 
 		coverage: {
 			reporter: ['text', 'html'],

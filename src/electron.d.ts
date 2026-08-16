@@ -19,7 +19,15 @@ declare module 'electron' {
 		showSaveDialog(options: SaveDialogOptions): Promise<SaveDialogReturnValue>;
 	}
 
-	export const remote: {
-		dialog: Dialog;
-	};
+	/**
+	 * Deliberately optional. Electron removed `remote` in version 14 and Obsidian
+	 * puts it back for plugin compatibility, so it exists today but is not
+	 * guaranteed to. Typing it as always-present would let the compiler bless a
+	 * call that throws the day that shim goes away.
+	 */
+	export const remote:
+		| {
+				dialog: Dialog;
+		  }
+		| undefined;
 }
