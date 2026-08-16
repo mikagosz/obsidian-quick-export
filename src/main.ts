@@ -11,6 +11,7 @@ import {
 	type ExportFormat,
 	exportFile,
 	exportText,
+	report,
 	resolveDir,
 	type WriteOptions,
 } from './exporter';
@@ -63,10 +64,12 @@ export default class QuickExportPlugin extends Plugin {
 				// editorCallback keeps the command out of the palette whenever
 				// there is no active editor, so no manual view check is needed.
 				editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
-					void exportText(editor, ctx.file, {
-						...this.writeOptions(variant.format),
-						selectionOnly: variant.selectionOnly,
-					});
+					report(
+						exportText(editor, ctx.file, {
+							...this.writeOptions(variant.format),
+							selectionOnly: variant.selectionOnly,
+						}),
+					);
 				},
 			});
 		}
@@ -89,7 +92,7 @@ export default class QuickExportPlugin extends Plugin {
 						.setTitle('Export a copy as Markdown')
 						.setIcon('download')
 						.onClick(() => {
-							void exportFile(this.app, file, this.writeOptions('md'));
+							report(exportFile(this.app, file, this.writeOptions('md')));
 						}),
 				);
 				menu.addItem((item) =>
@@ -97,7 +100,7 @@ export default class QuickExportPlugin extends Plugin {
 						.setTitle('Export a copy as plain text')
 						.setIcon('download')
 						.onClick(() => {
-							void exportFile(this.app, file, this.writeOptions('txt'));
+							report(exportFile(this.app, file, this.writeOptions('txt')));
 						}),
 				);
 			}),
@@ -120,10 +123,12 @@ export default class QuickExportPlugin extends Plugin {
 							.setTitle('Export selection as Markdown')
 							.setIcon('download')
 							.onClick(() => {
-								void exportText(editor, ctx.file, {
-									...this.writeOptions('md'),
-									selectionOnly: true,
-								});
+								report(
+									exportText(editor, ctx.file, {
+										...this.writeOptions('md'),
+										selectionOnly: true,
+									}),
+								);
 							}),
 					);
 					menu.addItem((item) =>
@@ -131,10 +136,12 @@ export default class QuickExportPlugin extends Plugin {
 							.setTitle('Export selection as plain text')
 							.setIcon('download')
 							.onClick(() => {
-								void exportText(editor, ctx.file, {
-									...this.writeOptions('txt'),
-									selectionOnly: true,
-								});
+								report(
+									exportText(editor, ctx.file, {
+										...this.writeOptions('txt'),
+										selectionOnly: true,
+									}),
+								);
 							}),
 					);
 				},

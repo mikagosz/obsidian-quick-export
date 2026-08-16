@@ -1,8 +1,8 @@
+import { promises as fs } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { remote } from 'electron';
-import { promises as fs } from 'fs';
 import { type App, type Editor, MarkdownView, Notice, type TFile } from 'obsidian';
-import { homedir } from 'os';
-import { join } from 'path';
 
 export type ExportFormat = 'md' | 'txt';
 export type TimestampFormat = 'iso' | 'readable';
@@ -36,8 +36,21 @@ function describeError(err: unknown): string {
 	return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * Every export is started from a click, so nothing on this path may end in
+ * silence. Without this the promise is dropped with `void` and an unexpected
+ * throw becomes an unhandled rejection: the menu item does nothing, and the user
+ * has no way of knowing why.
+ */
+export function report(work: Promise<unknown>): void {
+	void work.catch((err: unknown) => {
+		console.error('[quick-export] export failed', err);
+		new Notice(`Export failed: ${describeError(err)}`);
+	});
+}
+
 /** Strips characters that are illegal in file names and caps the length. */
-function sanitizeName(name: string): string {
+export function sanitizeName(name: string): string {
 	const cleaned = name
 		.replace(/[/\\:*?"<>|]/g, '-')
 		.replace(/\s+/g, ' ')
@@ -75,11 +88,22 @@ export function buildFileName(
  * writing silently, since that would defeat the point of asking.
  */
 async function resolveTargetPath(fileName: string, options: WriteOptions): Promise<string | null> {
+	const direct = join(options.targetDir, fileName);
 	if (!options.askLocation) {
-		return join(options.targetDir, fileName);
+		return direct;
 	}
 
-	const result = await remote.dialog.showSaveDialog({
+	// Electron dropped `remote` in version 14; Obsidian re-attaches it to the
+	// module for compatibility, which is the only reason this works at all. If
+	// that ever stops, write to the configured folder and say so — the one thing
+	// a click must never do is nothing.
+	const dialog = remote?.dialog;
+	if (!dialog) {
+		new Notice('This Obsidian build has no save dialog — saving to the export folder instead');
+		return direct;
+	}
+
+	const result = await dialog.showSaveDialog({
 		defaultPath: join(options.targetDir, fileName),
 		filters: [
 			{
@@ -111,8 +135,19 @@ async function writeExport(
 	}
 
 	try {
-		await fs.writeFile(fullPath, text, 'utf-8');
+		// The write lands outside the vault, where a name collision means somebody
+		// else's file. With the save dialog the user confirmed the path themselves,
+		// so overwriting is their decision; without it, refuse and say so rather
+		// than clobber. `wx` fails when the file already exists.
+		await fs.writeFile(fullPath, text, {
+			encoding: 'utf-8',
+			flag: options.askLocation ? 'w' : 'wx',
+		});
 	} catch (err) {
+		if (err instanceof Error && 'code' in err && err.code === 'EEXIST') {
+			new Notice(`${fileName} already exists in the export folder — nothing was overwritten`);
+			return null;
+		}
 		console.error('[quick-export] write failed', err);
 		new Notice(`Export failed: ${describeError(err)}`);
 		return null;

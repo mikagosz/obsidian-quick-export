@@ -6,6 +6,9 @@ export default defineConfig(
 	globalIgnores([
 		'node_modules',
 		'dist',
+		// The scanner's rules are about plugin code; the tests are not shipped and
+		// are outside the tsconfig project, which this parser treats as an error.
+		'tests',
 		'esbuild.config.mjs',
 		'vitest.config.ts',
 		'biome.json',
