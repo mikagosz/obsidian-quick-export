@@ -47,13 +47,14 @@ Characters that are illegal in file names (`/ \ : * ? " < > |`) are replaced wit
 
 | Setting | Default | Effect |
 |---|---|---|
-| Export folder | `~/Desktop` | Destination directory. A leading `~` expands to your home folder. |
+| Ask where to save | On | Opens the system save dialog on every export, starting in the export folder. Turn it off to write straight to the export folder. |
+| Export folder | `~/Desktop` | Destination directory. A leading `~` expands to your home folder. Must be a full path; left empty, it falls back to `~/Desktop`. |
 | Timestamp format | Readable | `2026-08-07_143045` or `2026-08-07T14-30-45`. |
 | Also copy to clipboard | Off | Mirrors the exported text to the clipboard. A clipboard failure never invalidates a successful write to disk. |
 
 ## Development
 
-Requires Node 18 or newer.
+Requires Node 20 or newer.
 
 ```bash
 npm install
@@ -71,10 +72,11 @@ Production build — this one also runs `tsc -noEmit`, so type errors fail the b
 npm run build
 ```
 
-Lint, including the Obsidian-specific guideline rules:
+Two linters: Biome for formatting and general rules, and the Obsidian plugin review rules on their own:
 
 ```bash
 npm run lint
+npm run lint:obsidian
 ```
 
 ### Testing against a vault
