@@ -1,10 +1,11 @@
 {
 	"id": "quick-export",
 	"name": "Quick Export",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"minAppVersion": "1.4.0",
 	"description": "Right-click a note or a text selection to save a copy outside the vault as .md or .txt.",
 	"author": "mikagosz",
 	"authorUrl": "https://github.com/mikagosz",
+	"fundingUrl": "https://github.com/sponsors/mikagosz",
 	"isDesktopOnly": true
 }
