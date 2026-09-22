@@ -8,7 +8,7 @@ import {
 	type SettingTextControl,
 	type SettingToggleControl,
 } from 'obsidian';
-import type { TimestampFormat } from './exporter';
+import { DEFAULT_EXPORT_PATH, type TimestampFormat } from './exporter';
 import type QuickExportPlugin from './main';
 
 export interface QuickExportSettings {
@@ -20,7 +20,7 @@ export interface QuickExportSettings {
 
 export const DEFAULT_SETTINGS: QuickExportSettings = {
 	autoClipboard: false,
-	exportPath: '~/Desktop',
+	exportPath: DEFAULT_EXPORT_PATH,
 	timestampFormat: 'readable',
 	askLocation: true,
 };

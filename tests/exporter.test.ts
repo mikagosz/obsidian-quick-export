@@ -7,10 +7,18 @@
  * an evening export. Both look like success.
  */
 
-import { homedir } from 'node:os';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Notice } from 'obsidian';
 import { describe, expect, it } from 'vitest';
-import { buildFileName, resolveDir, sanitizeName } from '../src/exporter.ts';
+import {
+	buildFileName,
+	type ExportOptions,
+	exportText,
+	resolveDir,
+	sanitizeName,
+} from '../src/exporter.ts';
 
 describe('resolveDir', () => {
 	it('expands a bare tilde to the home folder', () => {
@@ -33,6 +41,44 @@ describe('resolveDir', () => {
 	// ordinary character and must survive untouched.
 	it('does not touch a tilde that is not the first character', () => {
 		expect(resolveDir('/tmp/~backup')).toBe('/tmp/~backup');
+	});
+});
+
+// An emptied settings field used to become a relative path, resolved against
+// Obsidian's working directory — `/` on macOS.
+describe('resolveDir with an empty field', () => {
+	it('falls back to the default folder', () => {
+		expect(resolveDir('')).toBe(join(homedir(), 'Desktop'));
+		expect(resolveDir('   ')).toBe(join(homedir(), 'Desktop'));
+	});
+});
+
+describe('exportText without the save dialog', () => {
+	const editor = { getValue: () => 'A note.\n', getSelection: () => '' } as never;
+	const options = (targetDir: string): ExportOptions => ({
+		format: 'md',
+		copyToClipboard: false,
+		targetDir,
+		timestampFormat: 'readable',
+		askLocation: false,
+		selectionOnly: false,
+	});
+
+	it('refuses a relative folder instead of writing somewhere unchosen', async () => {
+		await expect(exportText(editor, null, options('exports'))).rejects.toThrow(/not a full path/);
+	});
+
+	it('names the folder in the success notice', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'quick-export-test-'));
+		try {
+			Notice.reset();
+			const written = await exportText(editor, null, options(dir));
+			expect(written).not.toBeNull();
+			expect(await readdir(dir)).toHaveLength(1);
+			expect(Notice.shown.at(-1)).toMatch(new RegExp(`^Saved untitled-.* to ${dir}$`));
+		} finally {
+			await rm(dir, { recursive: true, force: true });
+		}
 	});
 });
 

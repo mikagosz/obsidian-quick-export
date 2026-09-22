@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { remote } from 'electron';
 import { type App, type Editor, MarkdownView, Notice, type TFile } from 'obsidian';
 
@@ -21,12 +21,20 @@ export interface ExportOptions extends WriteOptions {
 	selectionOnly: boolean;
 }
 
+/** The export folder a fresh install starts with, and the one an emptied field falls back to. */
+export const DEFAULT_EXPORT_PATH = '~/Desktop';
+
 /**
  * Expands a leading `~` to the user's home directory. Obsidian's own
  * `normalizePath` is for vault-relative paths, so it must not be used here.
+ *
+ * An emptied field means the default, not "here": an empty string joined with a
+ * file name is a relative path, which Node resolves against Obsidian's working
+ * directory — `/` on macOS, where the write fails with EROFS and a message that
+ * says nothing about the setting.
  */
 export function resolveDir(raw: string): string {
-	const trimmed = raw.trim();
+	const trimmed = raw.trim() || DEFAULT_EXPORT_PATH;
 	if (trimmed === '~') return homedir();
 	if (trimmed.startsWith('~/')) return join(homedir(), trimmed.slice(2));
 	return trimmed;
@@ -88,9 +96,22 @@ export function buildFileName(
  * writing silently, since that would defeat the point of asking.
  */
 async function resolveTargetPath(fileName: string, options: WriteOptions): Promise<string | null> {
-	const direct = join(options.targetDir, fileName);
+	// A relative folder would be resolved against Obsidian's working directory,
+	// which the user never chose and cannot see: on macOS the write fails with a
+	// bare EROFS, elsewhere it can succeed somewhere nobody will look. The dialog
+	// can still start from the file name alone; a direct write refuses instead.
+	const absolute = isAbsolute(options.targetDir);
+	const direct = (): string => {
+		if (!absolute) {
+			throw new Error(
+				`the export folder "${options.targetDir}" is not a full path. In the Quick Export settings, set it to a folder starting with / or ~`,
+			);
+		}
+		return join(options.targetDir, fileName);
+	};
+
 	if (!options.askLocation) {
-		return direct;
+		return direct();
 	}
 
 	// Electron dropped `remote` in version 14; Obsidian re-attaches it to the
@@ -100,11 +121,11 @@ async function resolveTargetPath(fileName: string, options: WriteOptions): Promi
 	const dialog = remote?.dialog;
 	if (!dialog) {
 		new Notice('This Obsidian build has no save dialog — saving to the export folder instead');
-		return direct;
+		return direct();
 	}
 
 	const result = await dialog.showSaveDialog({
-		defaultPath: join(options.targetDir, fileName),
+		defaultPath: absolute ? join(options.targetDir, fileName) : fileName,
 		filters: [
 			{
 				name: options.format === 'md' ? 'Markdown' : 'Text',
@@ -164,7 +185,9 @@ async function writeExport(
 		}
 	}
 
-	new Notice(`Saved ${fileName}`);
+	// The folder too: with the save dialog off, the name alone does not say where
+	// the file went.
+	new Notice(`Saved ${fileName} to ${dirname(fullPath)}`);
 	return fullPath;
 }
 
