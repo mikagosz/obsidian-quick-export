@@ -1,5 +1,6 @@
 import {
 	type App,
+	debounce,
 	PluginSettingTab,
 	Setting,
 	type SettingDefinitionBase,
@@ -133,6 +134,10 @@ export class QuickExportSettingTab extends PluginSettingTab {
 			const commit = (value: unknown) => {
 				void this.setControlValue(control.key, value);
 			};
+			// Typing a folder path fired a write to data.json on every keystroke,
+			// half-typed paths included. Toggles and dropdowns change once per click,
+			// so only the text field waits for the typing to stop.
+			const commitTyped = debounce(commit, 500, true);
 
 			switch (control.type) {
 				case 'toggle':
@@ -145,7 +150,7 @@ export class QuickExportSettingTab extends PluginSettingTab {
 						text
 							.setPlaceholder(control.placeholder ?? '')
 							.setValue(this.getControlValue(control.key) as string)
-							.onChange(commit),
+							.onChange(commitTyped),
 					);
 					break;
 				case 'dropdown':
