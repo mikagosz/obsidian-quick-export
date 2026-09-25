@@ -33,8 +33,11 @@ export const DEFAULT_EXPORT_PATH = '~/Desktop';
  * directory — `/` on macOS, where the write fails with EROFS and a message that
  * says nothing about the setting.
  */
-export function resolveDir(raw: string): string {
-	const trimmed = raw.trim() || DEFAULT_EXPORT_PATH;
+export function resolveDir(raw: unknown): string {
+	// data.json is a file anyone can edit, and `exportPath: null` there used to
+	// throw from inside a click handler before `report` could catch it: the menu
+	// item did nothing and said nothing. Anything that is not text means default.
+	const trimmed = (typeof raw === 'string' ? raw.trim() : '') || DEFAULT_EXPORT_PATH;
 	if (trimmed === '~') return homedir();
 	if (trimmed.startsWith('~/')) return join(homedir(), trimmed.slice(2));
 	return trimmed;

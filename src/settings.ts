@@ -28,6 +28,16 @@ export const DEFAULT_SETTINGS: QuickExportSettings = {
 
 type SettingKey = keyof QuickExportSettings;
 
+/**
+ * Keys edited in a text field. Those report every keystroke, so their writes to
+ * data.json wait for the typing to stop; toggles and dropdowns change once per
+ * click and are saved at once.
+ */
+const TYPED_KEYS: ReadonlySet<string> = new Set<SettingKey>(['exportPath']);
+
+/** How long typing has to pause before a typed value is written to disk. */
+const TYPING_PAUSE_MS = 500;
+
 /** Only the three control kinds this plugin actually uses. */
 type QuickExportControl =
 	| SettingToggleControl<SettingKey>
@@ -40,6 +50,8 @@ interface QuickExportDefinition extends SettingDefinitionBase {
 
 export class QuickExportSettingTab extends PluginSettingTab {
 	plugin: QuickExportPlugin;
+	private typedPending = false;
+	private readonly saveTyped = debounce(() => this.flushTyped(), TYPING_PAUSE_MS, true);
 
 	constructor(app: App, plugin: QuickExportPlugin) {
 		super(app, plugin);
@@ -110,9 +122,36 @@ export class QuickExportSettingTab extends PluginSettingTab {
 		return this.plugin.settings[key as SettingKey];
 	}
 
+	/**
+	 * Both render paths end here. Obsidian 1.13+ draws the tab from
+	 * `getSettingDefinitions()` and calls this on every keystroke with no delay
+	 * of its own, so a wait placed only in `display()` never ran there: typing a
+	 * folder path wrote data.json once per character. The wait lives here now.
+	 * The value in memory changes at once — exports read it at click time.
+	 */
 	async setControlValue(key: string, value: unknown): Promise<void> {
 		Object.assign(this.plugin.settings, { [key]: value });
+		if (TYPED_KEYS.has(key)) {
+			this.typedPending = true;
+			this.saveTyped();
+			return;
+		}
 		await this.plugin.saveSettings();
+	}
+
+	/** Leaving the tab writes a pending typed value now rather than half a second later. */
+	override hide(): void {
+		this.saveTyped.cancel();
+		this.flushTyped();
+		super.hide();
+	}
+
+	private flushTyped(): void {
+		if (!this.typedPending) return;
+		this.typedPending = false;
+		this.plugin.saveSettings().catch((error: unknown) => {
+			console.error('[quick-export] could not save the settings', error);
+		});
 	}
 
 	/**
@@ -131,13 +170,11 @@ export class QuickExportSettingTab extends PluginSettingTab {
 			}
 
 			const control = definition.control;
+			// Typed values wait for the typing to stop inside `setControlValue`,
+			// the same way on both render paths.
 			const commit = (value: unknown) => {
 				void this.setControlValue(control.key, value);
 			};
-			// Typing a folder path fired a write to data.json on every keystroke,
-			// half-typed paths included. Toggles and dropdowns change once per click,
-			// so only the text field waits for the typing to stop.
-			const commitTyped = debounce(commit, 500, true);
 
 			switch (control.type) {
 				case 'toggle':
@@ -150,7 +187,7 @@ export class QuickExportSettingTab extends PluginSettingTab {
 						text
 							.setPlaceholder(control.placeholder ?? '')
 							.setValue(this.getControlValue(control.key) as string)
-							.onChange(commitTyped),
+							.onChange(commit),
 					);
 					break;
 				case 'dropdown':

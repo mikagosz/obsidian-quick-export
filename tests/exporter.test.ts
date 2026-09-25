@@ -53,6 +53,16 @@ describe('resolveDir with an empty field', () => {
 	});
 });
 
+// A hand-edited data.json can hold anything. `raw.trim()` on it threw inside the
+// click handler, before `report` could catch it, so the export did nothing silently.
+describe('resolveDir with something other than text', () => {
+	it('falls back to the default folder instead of throwing', () => {
+		for (const raw of [null, undefined, 5, true, {}, []]) {
+			expect(resolveDir(raw)).toBe(join(homedir(), 'Desktop'));
+		}
+	});
+});
+
 describe('exportText without the save dialog', () => {
 	const editor = { getValue: () => 'A note.\n', getSelection: () => '' } as never;
 	const options = (targetDir: string): ExportOptions => ({
