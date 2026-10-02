@@ -1,6 +1,6 @@
 # Quick Export
 
-<a href="https://github.com/sponsors/mikagosz"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" width="350" alt="Sponsor on GitHub Sponsors"></a>
+<a href="https://github.com/sponsors/mikagosz"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?logo=githubsponsors&logoColor=white" width="220" alt="Sponsor on GitHub Sponsors"></a>
 
 An Obsidian plugin that saves a copy of a note — or just the text you selected — to a folder outside the vault, as `.md` or `.txt`.
 
