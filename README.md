@@ -13,6 +13,10 @@ In the file explorer, on a tab, or on the note title:
 - **Export a copy as Markdown**
 - **Export a copy as plain text**
 
+| Light | Dark |
+|---|---|
+| ![The file explorer's right-click menu with Export a copy as Markdown and Export a copy as plain text](docs/note-menu-light.png) | ![The same menu in the dark theme](docs/note-menu-dark.png) |
+
 The note does not have to be open. If it *is* open with unsaved edits, the export takes the live editor content rather than the older copy on disk.
 
 Only markdown notes get these items; right-clicking an image or a PDF leaves the menu untouched.
@@ -25,6 +29,10 @@ Select text inside a note, then right-click it:
 - **Export selection as plain text**
 
 These items appear **only when something is selected**, so the editor's context menu stays clean during ordinary writing.
+
+| Light | Dark |
+|---|---|
+| ![The editor's right-click menu on a selected line, with Export selection as Markdown and Export selection as plain text](docs/selection-menu-light.png) | ![The same menu in the dark theme](docs/selection-menu-dark.png) |
 
 ## Command palette and hotkeys
 
