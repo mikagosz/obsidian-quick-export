@@ -7,11 +7,12 @@
  * an evening export. Both look like success.
  */
 
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { promises as fsPromises } from 'node:fs';
+import { mkdtemp, readdir, writeFile as realWriteFile, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Notice } from 'obsidian';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
 	buildFileName,
 	type ExportOptions,
@@ -89,6 +90,39 @@ describe('exportText without the save dialog', () => {
 		} finally {
 			await rm(dir, { recursive: true, force: true });
 		}
+	});
+
+	// A full disk created the file, then failed to fill it: an empty file stayed in
+	// the export folder, looking like an export.
+	it('takes back the file it created when the write fails half-way', async () => {
+		const dir = await mkdtemp(join(tmpdir(), 'quick-export-test-'));
+		const spy = vi.spyOn(fsPromises, 'writeFile').mockImplementation(async (path) => {
+			await realWriteFile(path as string, '', { flag: 'wx' });
+			throw Object.assign(new Error('ENOSPC: no space left on device, write'), {
+				code: 'ENOSPC',
+			});
+		});
+		try {
+			Notice.reset();
+			expect(await exportText(editor, null, options(dir))).toBeNull();
+			expect(await readdir(dir)).toEqual([]);
+			expect(Notice.shown.at(-1)).toMatch(/^Export failed: ENOSPC/);
+		} finally {
+			spy.mockRestore();
+			await rm(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe('sanitizeName at the length cap', () => {
+	it('never leaves half of an emoji at the end', () => {
+		const name = sanitizeName(`${'x'.repeat(79)}😀tail`);
+		expect(name).toBe('x'.repeat(79));
+		expect(/[\uD800-\uDBFF]$/.test(name)).toBe(false);
+	});
+
+	it('keeps a whole emoji that fits', () => {
+		expect(sanitizeName(`${'x'.repeat(78)}😀tail`)).toBe(`${'x'.repeat(78)}😀`);
 	});
 });
 

@@ -29,6 +29,24 @@ export const DEFAULT_SETTINGS: QuickExportSettings = {
 type SettingKey = keyof QuickExportSettings;
 
 /**
+ * Settings from whatever sits in data.json. A field of the wrong kind falls back
+ * to its default: `askLocation: "false"` — a string, so truthy — opened the save
+ * dialog and let it overwrite, the opposite of what it says.
+ */
+export function settingsFrom(stored: unknown): QuickExportSettings {
+	const settings: QuickExportSettings = { ...DEFAULT_SETTINGS };
+	if (typeof stored !== 'object' || stored === null || Array.isArray(stored)) return settings;
+	const record = stored as Record<string, unknown>;
+	if (typeof record.autoClipboard === 'boolean') settings.autoClipboard = record.autoClipboard;
+	if (typeof record.askLocation === 'boolean') settings.askLocation = record.askLocation;
+	if (typeof record.exportPath === 'string') settings.exportPath = record.exportPath;
+	if (record.timestampFormat === 'iso' || record.timestampFormat === 'readable') {
+		settings.timestampFormat = record.timestampFormat;
+	}
+	return settings;
+}
+
+/**
  * Keys edited in a text field. Those report every keystroke, so their writes to
  * data.json wait for the typing to stop; toggles and dropdowns change once per
  * click and are saved at once.

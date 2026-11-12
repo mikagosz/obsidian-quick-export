@@ -66,7 +66,10 @@ export function sanitizeName(name: string): string {
 		.replace(/[/\\:*?"<>|]/g, '-')
 		.replace(/\s+/g, ' ')
 		.trim()
-		.slice(0, 80);
+		.slice(0, 80)
+		// The cap counts UTF-16 units, so it can land inside an emoji; the half left
+		// over became "�" in the file name.
+		.replace(/[\uD800-\uDBFF]$/, '');
 	return cleaned.length > 0 ? cleaned : 'untitled';
 }
 
@@ -173,6 +176,12 @@ async function writeExport(
 			return null;
 		}
 		console.error('[quick-export] write failed', err);
+		// With `wx` the file was created by this very write, so it is ours to take
+		// back: a full disk used to leave an empty file that looked like an export.
+		// With the save dialog the path may have been someone else's file — left alone.
+		if (!options.askLocation) {
+			await fs.unlink(fullPath).catch(() => {});
+		}
 		new Notice(`Export failed: ${describeError(err)}`);
 		return null;
 	}

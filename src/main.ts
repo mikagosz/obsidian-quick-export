@@ -15,7 +15,7 @@ import {
 	resolveDir,
 	type WriteOptions,
 } from './exporter';
-import { DEFAULT_SETTINGS, type QuickExportSettings, QuickExportSettingTab } from './settings';
+import { type QuickExportSettings, QuickExportSettingTab, settingsFrom } from './settings';
 
 interface Variant {
 	id: string;
@@ -161,11 +161,7 @@ export default class QuickExportPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign(
-			{},
-			DEFAULT_SETTINGS,
-			(await this.loadData()) as Partial<QuickExportSettings>,
-		);
+		this.settings = settingsFrom(await this.loadData());
 	}
 
 	async saveSettings() {
